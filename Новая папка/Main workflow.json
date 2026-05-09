@@ -1,0 +1,487 @@
+{
+  "name": "Industria 4.0",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.body.object.message.text }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "Ты — старший сервисный инженер по ЧПУ станкам Heidenhain TNC 620. Твоя задача — помогать операторам диагностировать ошибки и ремонтировать станок.\n\nТВОЕ ГЛАВНОЕ ПРАВИЛО: \nТы НЕ ИМЕЕШЬ ПРАВА отвечать, опираясь только на свою базовую память. Ты ОБЯЗАН сначала использовать инструменты поиска по сервисному руководству. НИКОГДА не выдумывай причины ошибок, коды или методы ремонта. Если информации по запросу в базе нет, прямо скажи: \"К сожалению, в сервисном руководстве нет точной информации по этой проблеме. Рекомендую обратиться в официальную поддержку.\"\n\nТВОЙ АЛГОРИТМ ПОИСКА (КРИТИЧЕСКИ ВАЖНО):\nДля ответа на ЛЮБОЙ технический вопрос пользователя, ты ОБЯЗАН выполнить следующие шаги строго по порядку:\n1. СНАЧАЛА вызови инструмент `exact_code_search`. Передай в него точный код ошибки (например, 231-E00F) или главное ключевое слово. Дождись результатов.\n2. ЗАТЕМ ОБЯЗАТЕЛЬНО вызови инструмент векторного поиска (Vector Store). Передай в него общий смысл проблемы (например, \"ошибка тормоза\" или \"как проверить проводку\"). Ты должен сделать это, ДАЖЕ ЕСЛИ первый инструмент уже нашел ответ.\n3. Только когда у тебя на руках будут данные из ОБЕИХ баз, проанализируй их, объедини полезную информацию и сформируй финальный ответ.\n\nПРАВИЛА ОФОРМЛЕНИЯ (СТРОГО PLAIN TEXT):\n1. Отвечай ТОЛЬКО обычным текстом. \n2. КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО использовать любые спецсимволы разметки Markdown: никаких звездочек (*), нижних подчеркиваний (_), решеток (#), обратных кавычек (`) или квадратных скобок ([]).\n3. Вместо жирного шрифта используй ЗАГЛАВНЫЕ БУКВЫ для акцентов и заголовков.\n\nСТРУКТУРА ОТВЕТА:\nЕсли вопрос касается ошибки, всегда строй ответ по этому шаблону:\nРАСШИФРОВКА ОШИБКИ: (кратко суть)\nВОЗМОЖНЫЕ ПРИЧИНЫ: (список текстом)\nАЛГОРИТМ ДЕЙСТВИЙ: (используй простые цифры 1. 2. 3. без спецсимволов).\n\nОтвечай вежливо, кратко, по делу и строго на русском языке."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        192,
+        0
+      ],
+      "id": "356179d9-69a3-4782-a247-e044286dc39a",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        48,
+        208
+      ],
+      "id": "fd64e18a-f81f-489f-94ad-31088efe7ba1",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "30K0vSGaRfK56tMs",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Обязательно используй этот инструмент для ответа на ЛЮБЫЕ вопросы пользователя. Здесь находится вся база знаний по станкам, включая коды ошибок (например, Ev_class), инструкции, мануалы и методы ремонта. Если пользователь спрашивает про ошибку — немедленно вызывай этот инструмент!",
+        "memoryKey": {
+          "__rl": true,
+          "value": "heidenhain_clean_1",
+          "mode": "list",
+          "cachedResultName": "heidenhain_clean_1"
+        },
+        "topK": 15,
+        "includeDocumentMetadata": false
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreInMemory",
+      "typeVersion": 1.3,
+      "position": [
+        592,
+        240
+      ],
+      "id": "3196c53c-992d-4c4e-8991-070e41d87585",
+      "name": "Simple Vector Store"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        768,
+        400
+      ],
+      "id": "5cbd5250-6fbc-4fe2-9c52-456b3666fdf0",
+      "name": "Embeddings Google Gemini",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "Z5aKWADn4FK6tB1K",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        1088,
+        -336
+      ],
+      "id": "33840ed2-55c6-437b-8678-d0fc63909d20",
+      "name": "Telegram Trigger",
+      "webhookId": "8cf7ffa9-a759-4f2c-8280-93aeecf869c7",
+      "credentials": {
+        "telegramApi": {
+          "id": "Bc8NuPhRQ7BNB6Ns",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.output }}",
+        "replyMarkup": "forceReply",
+        "forceReply": {
+          "force_reply": true
+        },
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1296,
+        -336
+      ],
+      "id": "1ca269b9-839e-4fd1-8bf8-4df8af6aa937",
+      "name": "Send a text message",
+      "webhookId": "2d4c6f2e-849c-45ee-9a9e-03b0c7bb6bd2",
+      "credentials": {
+        "telegramApi": {
+          "id": "Bc8NuPhRQ7BNB6Ns",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Берем текст из выхода Агента\nlet text = $input.first().json.output\n\n// Вырезаем всё, что может сломать Telegram (звездочки, подчеркивания и т.д.)\n// Мы заменяем их на пустую строку или пробел\nlet cleanText = text.replace(/[*_`\\[\\]()]/g, '');\n\nreturn {\n  output: cleanText\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        576,
+        0
+      ],
+      "id": "f0a0fea9-f21e-4803-8def-d93d8fc87bad",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "description": "CRITICAL TOOL. Используй этот инструмент ПЕРВЫМ, если пользователь ввел точный код ошибки (например, 140-0045, 231-E00F, или любой другой буквенно-цифровой ID). Передай этот код в параметр error_code. Это текстовый поиск по мануалу.",
+        "workflowId": {
+          "__rl": true,
+          "value": "s4F8G0k3Fyr0Q0DX",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/s4F8G0k3Fyr0Q0DX",
+          "cachedResultName": "Exact Search Tool"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "error_code": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('error_code', ``, 'string') }}"
+          },
+          "matchingColumns": [
+            "error_code"
+          ],
+          "schema": [
+            {
+              "id": "error_code",
+              "displayName": "error_code",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        432,
+        320
+      ],
+      "id": "40c01d4c-9d17-41ea-aed4-f596c8541808",
+      "name": "Call 'Exact Search Tool'"
+    },
+    {
+      "parameters": {
+        "model": "qwen/qwen3-32b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        1296,
+        -144
+      ],
+      "id": "64d70e59-dd9f-4cfe-ace2-14273ab6df4d",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "Tluo9GOajubTqoq1",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "56af2ca0-0103-4b4e-8781-3ef40fd786b3",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -320,
+        0
+      ],
+      "id": "5b90e245-5f0c-49ca-87a0-ffaa6728aa06",
+      "name": "Webhook",
+      "webhookId": "56af2ca0-0103-4b4e-8781-3ef40fd786b3"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.type }}",
+                    "rightValue": "confirmation",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "ed4721bd-9e66-4e20-a9b0-1728243192ca"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "a2bfb85b-b159-4896-9201-e615f898ed2b",
+                    "leftValue": "={{ $json.body.type }}",
+                    "rightValue": "message_new",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -128,
+        0
+      ],
+      "id": "bc8b9376-4109-47d8-affc-4ea9b9de2392",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": " fc222f6d",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        128,
+        -160
+      ],
+      "id": "09b58d07-896d-479e-8503-dd350abaa12f",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.vk.com/method/messages.send",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "access_token",
+              "value": "vk1.a.eMeHyrCJHTXZdrk54R3r51c4io4Vqyn3VwcQhLRyUTdHQfRyJrpvcryUH8yWXa8FsJV3ZbRqxOCH5HXN10FdvfZKO3Lay0tFgFYhppFFuKL0WZ6HOIWCl7CTbIvbAhXOC_i6dDEGy7bt59sd4bUdSn4MlWKT06mSdrXqhHUDz58wprO9dv1syPBwZpCVjgR2B2r4xnxBzy1zfDy_lgaEoA"
+            },
+            {
+              "name": "v",
+              "value": "5.199"
+            },
+            {
+              "name": "peer_id",
+              "value": "={{ $('Webhook').first().json.body.object.message.from_id }}"
+            },
+            {
+              "name": "message",
+              "value": "={{ $json.output }}"
+            },
+            {
+              "name": "random_id",
+              "value": "0"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        784,
+        0
+      ],
+      "id": "d13b9d7f-2577-4f33-99cd-79bbf54d935c",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "ok",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        992,
+        0
+      ],
+      "id": "41fd64e5-f8e5-4a47-afb8-b79ed521929d",
+      "name": "Respond to Webhook1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Vector Store": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Google Gemini": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Simple Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger": {
+      "main": [
+        []
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'Exact Search Tool'": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        []
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "c6335983-2925-43e9-a961-43437bee45f0",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0fb7d36ce38ba1b4f273716e3b362dabb2611bb45af2d6bbc3212357fce812df"
+  },
+  "id": "ppDNoh0Tei73Aggc",
+  "tags": []
+}

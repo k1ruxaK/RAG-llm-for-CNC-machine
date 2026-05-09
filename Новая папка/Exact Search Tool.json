@@ -1,0 +1,117 @@
+{
+  "name": "Exact Search Tool",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "error_code"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -144,
+        -64
+      ],
+      "id": "cd3f88f6-bcd7-42c0-a159-65563062b5ed",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "fileSelector": "/home/node/.n8n-files/Manual_shortened.pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        64,
+        -64
+      ],
+      "id": "e37066ff-91b7-4b71-9951-91c92cae572a",
+      "name": "Read/Write Files from Disk"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        272,
+        -64
+      ],
+      "id": "5f597b2e-5537-4646-a497-f9274103af4a",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Получаем код от Агента\nconst query = $('When Executed by Another Workflow').first().json.error_code;\n\n// Получаем текст мануала. \n// ВНИМАНИЕ: Замени 'Extract from File' на имя твоей ноды, которая выдает текст\nconst textData = $input.first().json.text; \n\nif (!query || !textData) {\n  return { result: \"Сбой: текст мануала или код не получены.\" };\n}\n\n// Защита от дефисов и спецсимволов в коде (чтобы regex не сломался)\nconst escapeRegex = (string) => string.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');\nconst regex = new RegExp(escapeRegex(query), 'gi');\n\nlet match;\nlet results = [];\nlet count = 0;\n\n// Ищем до 3 совпадений, берем по 400 символов (около 50 слов) до и после\nwhile ((match = regex.exec(textData)) !== null && count < 3) {\n    let start = Math.max(0, match.index - 400);\n    let end = Math.min(textData.length, match.index + query.length + 400);\n    let snippet = textData.substring(start, end);\n    \n    results.push(`[Совпадение ${count + 1}]:\\n...${snippet}...`);\n    count++;\n}\n\nif (count === 0) {\n    return { result: `Прямых упоминаний кода ${query} не найдено. Используй векторный поиск.` };\n}\n\nreturn { result: `Найдены точные совпадения для ${query}:\\n\\n` + results.join('\\n\\n') };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        -64
+      ],
+      "id": "b0126cad-7342-4f1b-b7c7-60cc41be5be9",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "55432175-4767-46c4-a700-c00bfe173df3",
+  "meta": {
+    "instanceId": "0fb7d36ce38ba1b4f273716e3b362dabb2611bb45af2d6bbc3212357fce812df"
+  },
+  "id": "s4F8G0k3Fyr0Q0DX",
+  "tags": []
+}
